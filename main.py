@@ -8,26 +8,35 @@ import utils
 import TD3
 import OurDDPG
 import DDPG
+from Pendulum import *  # added by Ben
 
 
 # Runs policy for X episodes and returns average reward
 # A fixed seed is used for the eval environment
 def eval_policy(policy, env_name, seed, eval_episodes=10):
-	eval_env = gym.make(env_name)
-	eval_env.seed(seed + 100)
+	# eval_env = gym.make(env_name)
+	# eval_env.seed(seed + 100)
+	eval_env = Pendulum(0, args.seed + 100)
 
 	avg_reward = 0.
+
 	for _ in range(eval_episodes):
-		state, done = eval_env.reset(), False
-		while not done:
+		rep = 0
+
+		state, done = eval_env.reset(None), False
+		while not done and rep < 200:
+			rep += 1
+
 			action = policy.select_action(np.array(state))
+			# print(action)
 			state, reward, done, _ = eval_env.step(action)
 			avg_reward += reward
+			# print(reward.shape)
 
 	avg_reward /= eval_episodes
 
 	print("---------------------------------------")
-	print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
+	print(f"Evaluation over {eval_episodes} episodes: {avg_reward}")
 	print("---------------------------------------")
 	return avg_reward
 
@@ -63,17 +72,21 @@ if __name__ == "__main__":
 	if args.save_model and not os.path.exists("./models"):
 		os.makedirs("./models")
 
-	env = gym.make(args.env)
+	# env = gym.make(args.env)
+	env = Pendulum(0, args.seed)
 
 	# Set seeds
-	env.seed(args.seed)
-	env.action_space.seed(args.seed)
+	# env.seed(args.seed)
+	# env.action_space.seed(args.seed)
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
 	
-	state_dim = env.observation_space.shape[0]
-	action_dim = env.action_space.shape[0] 
-	max_action = float(env.action_space.high[0])
+	# state_dim = env.observation_space.shape[0]
+	# action_dim = env.action_space.shape[0]
+	# max_action = float(env.action_space.high[0])
+	state_dim = 3
+	action_dim = 1
+	max_action = 1
 
 	kwargs = {
 		"state_dim": state_dim,
@@ -104,7 +117,7 @@ if __name__ == "__main__":
 	# Evaluate untrained policy
 	evaluations = [eval_policy(policy, args.env, args.seed)]
 
-	state, done = env.reset(), False
+	state, done = env.reset(None), False
 	episode_reward = 0
 	episode_timesteps = 0
 	episode_num = 0
@@ -115,7 +128,8 @@ if __name__ == "__main__":
 
 		# Select action randomly or according to policy
 		if t < args.start_timesteps:
-			action = env.action_space.sample()
+			# action = env.action_space.sample()
+			action = np.random.uniform(low=-1, high=1)
 		else:
 			action = (
 				policy.select_action(np.array(state))
@@ -123,11 +137,15 @@ if __name__ == "__main__":
 			).clip(-max_action, max_action)
 
 		# Perform action
-		next_state, reward, done, _ = env.step(action) 
-		done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
+		next_state, reward, done, _ = env.step([action])
+		# done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
+		done_bool = float(done) if episode_timesteps < 200 else 0
 
 		# Store data in replay buffer
-		replay_buffer.add(state, action, next_state, reward, done_bool)
+		# print(next_state)
+		# print(reward)
+		# print(done)
+		replay_buffer.add(state, action, next_state, reward[0], done_bool)
 
 		state = next_state
 		episode_reward += reward
@@ -136,14 +154,14 @@ if __name__ == "__main__":
 		if t >= args.start_timesteps:
 			policy.train(replay_buffer, args.batch_size)
 
-		if done: 
+		if done or episode_timesteps % 200 == 0:
 			# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
 			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward:.3f}")
 			# Reset environment
-			state, done = env.reset(), False
+			state, done = env.reset(None), False
 			episode_reward = 0
 			episode_timesteps = 0
-			episode_num += 1 
+			episode_num += 1
 
 		# Evaluate episode
 		if (t + 1) % args.eval_freq == 0:
