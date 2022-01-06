@@ -13,25 +13,33 @@ from Pendulum import *  # added by Ben
 
 # Runs policy for X episodes and returns average reward
 # A fixed seed is used for the eval environment
-def eval_policy(policy, env_name, seed, eval_episodes=10):
+def eval_policy(policy, env_name, seed, eval_episodes=3):
 	# eval_env = gym.make(env_name)
 	# eval_env.seed(seed + 100)
-	eval_env = Pendulum(0, args.seed + 100)
+	eval_env = Pendulum(1, seed + 100)
 
 	avg_reward = 0.
 
-	for _ in range(eval_episodes):
+	for i in range(eval_episodes):
+
+		# print(_)
+
 		rep = 0
 
 		state, done = eval_env.reset(None), False
-		while not done and rep < 200:
+
+		# print("eval_state",state)
+
+		while not done and rep < 3000:
 			rep += 1
 
+			eval_env.render(i + 1)
+
 			action = policy.select_action(np.array(state))
-			# print(action)
+			# print("eval_action",action)
 			state, reward, done, _ = eval_env.step(action)
 			avg_reward += reward
-			# print(reward.shape)
+			# print("eval_reward", reward)
 
 	avg_reward /= eval_episodes
 
@@ -60,6 +68,8 @@ if __name__ == "__main__":
 	parser.add_argument("--save_model", action="store_true")        # Save model and optimizer parameters
 	parser.add_argument("--load_model", default="")                 # Model load file name, "" doesn't load, "default" uses file_name
 	args = parser.parse_args()
+
+	# print(args.save_model)
 
 	file_name = f"{args.policy}_{args.env}_{args.seed}"
 	print("---------------------------------------")
@@ -111,60 +121,75 @@ if __name__ == "__main__":
 	if args.load_model != "":
 		policy_file = file_name if args.load_model == "default" else args.load_model
 		policy.load(f"./models/{policy_file}")
+		eval_policy(policy, args.env, args.seed)
 
-	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-	
-	# Evaluate untrained policy
-	evaluations = [eval_policy(policy, args.env, args.seed)]
+	else:
+		replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
 
-	state, done = env.reset(None), False
-	episode_reward = 0
-	episode_timesteps = 0
-	episode_num = 0
+		# Evaluate untrained policy
+		evaluations = [eval_policy(policy, args.env, args.seed)]
 
-	for t in range(int(args.max_timesteps)):
-		
-		episode_timesteps += 1
+		state, done = env.reset(None), False
 
-		# Select action randomly or according to policy
-		if t < args.start_timesteps:
-			# action = env.action_space.sample()
-			action = np.random.uniform(low=-1, high=1)
-		else:
-			action = (
-				policy.select_action(np.array(state))
-				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-			).clip(-max_action, max_action)
+		# print("state",state)
 
-		# Perform action
-		next_state, reward, done, _ = env.step([action])
-		# done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
-		done_bool = float(done) if episode_timesteps < 200 else 0
+		episode_reward = 0
+		episode_timesteps = 0
+		episode_num = 0
 
-		# Store data in replay buffer
-		# print(next_state)
-		# print(reward)
-		# print(done)
-		replay_buffer.add(state, action, next_state, reward[0], done_bool)
+		for t in range(int(args.max_timesteps)):
 
-		state = next_state
-		episode_reward += reward
+			episode_timesteps += 1
 
-		# Train agent after collecting sufficient data
-		if t >= args.start_timesteps:
-			policy.train(replay_buffer, args.batch_size)
+			# Select action randomly or according to policy
+			if t < args.start_timesteps:
+				# action = env.action_space.sample()
+				action = np.random.uniform(low=-1, high=1, size=action_dim)
+				action_test = (
+					policy.select_action(np.array(state))
+					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				).clip(-max_action, max_action)
+			else:
+				action = (
+					policy.select_action(np.array(state))
+					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				).clip(-max_action, max_action)
 
-		if done or episode_timesteps % 200 == 0:
-			# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward:.3f}")
-			# Reset environment
-			state, done = env.reset(None), False
-			episode_reward = 0
-			episode_timesteps = 0
-			episode_num += 1
+			# Perform action
+			next_state, reward, done, _ = env.step(action)
 
-		# Evaluate episode
-		if (t + 1) % args.eval_freq == 0:
-			evaluations.append(eval_policy(policy, args.env, args.seed))
-			np.save(f"./results/{file_name}", evaluations)
-			if args.save_model: policy.save(f"./models/{file_name}")
+			#print("test")
+			# print(next_state)
+			# print("reward",reward)
+			# print(done)
+
+			# done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
+			done_bool = float(done) if episode_timesteps < 200 else 0
+
+			# Store data in replay buffer
+			# print(next_state)
+			# print(reward)
+			# print(done)
+			replay_buffer.add(state, action, next_state, reward, done_bool)
+
+			state = next_state
+			episode_reward += reward
+
+			# Train agent after collecting sufficient data
+			if t >= args.start_timesteps:
+				policy.train(replay_buffer, args.batch_size)
+
+			if done or episode_timesteps % 200 == 0:
+				# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
+				print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward}")
+				# Reset environment
+				state, done = env.reset(None), False
+				episode_reward = 0
+				episode_timesteps = 0
+				episode_num += 1
+
+			# Evaluate episode
+			if (t + 1) % args.eval_freq == 0:
+				evaluations.append(eval_policy(policy, args.env, args.seed))
+				np.save(f"./results/{file_name}", evaluations)
+				if args.save_model: policy.save(f"./models/{file_name}")

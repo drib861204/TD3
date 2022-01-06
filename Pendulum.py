@@ -73,7 +73,7 @@ class Pendulum:
             self.theta_rod = np.random.uniform(low=-roll_range * pi / 180, high=roll_range * pi / 180)
         elif saved != None:
             self.theta_rod = roll_range * 1 * pi / 180
-        #print(self.theta_rod*180/pi)
+        # print(self.theta_rod*180/pi)
 
         #self.theta_rod = np.random.uniform(low=-roll_range*pi/180, high=roll_range*pi/180)
         #self.theta_rod = np.random.uniform(low=0, high=roll_range*pi/180)
@@ -87,6 +87,9 @@ class Pendulum:
         #self.theta_rod_dot = (np.random.random() * 2 - 1) * reset_max_speed
         self.theta_wheel_dot = 0
         state = np.array([self.theta_rod, self.theta_rod_dot, self.theta_wheel_dot], dtype=np.float32)
+
+        # print(state)
+
         return state
 
 
@@ -146,19 +149,28 @@ class Pendulum:
         #R = 0.38
         #action_scale = 48
 
+        # print("action in pendulum",type(action))
+        # print("q1",q1)
+
         action_scale = self.max_torque
 
+        # print("action_scale",action_scale)
+
         torque = action * action_scale
+
+        # print("T",torque)
+
         #voltage = action * action_scale
         #torque = gear_ratio*kt/R*(voltage-ke*gear_ratio*q2_dot)
         torque = np.clip(torque, -self.max_torque, self.max_torque)
         #print("v",voltage)
-        #print("T",torque)
+        # print("T",torque)
         #print("q2dot",q2_dot)
         #print("q2", q2)
 
         Ip = m1*l1**2+m2*l2**2+I1+I2
         a = (m1*l1+m2*l2)*g*sin(angle_normalize(q1))
+        # print("a",a)
 
         newq1_dot = q1_dot + ((a-torque)/(Ip-I2))*dt
         #print("rod ang_vel",newq1_dot)
@@ -176,6 +188,9 @@ class Pendulum:
         #print("torque",torque)
         #print("\n")
         #print([torque, newq1[0], newq2[0], newq1_dot[0], newq2_dot[0]])
+
+        # print("torque",torque)
+        # print("newq1",newq1)
 
         state = np.array([newq1[0], newq1_dot[0], newq2_dot[0]], dtype=np.float32)
 
