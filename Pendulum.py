@@ -65,7 +65,7 @@ class Pendulum:
 
 
     def reset(self, saved):
-        roll_range = 3 #in degree
+        roll_range = 0.5 #in degree
         self.ang = roll_range
         #reset_max_speed = 3
 
@@ -73,6 +73,8 @@ class Pendulum:
             self.theta_rod = np.random.uniform(low=-roll_range * pi / 180, high=roll_range * pi / 180)
         elif saved != None:
             self.theta_rod = roll_range * 1 * pi / 180
+            #test_param = np.random.uniform(low=-roll_range * pi / 180, high=roll_range * pi / 180)
+
         # print(self.theta_rod*180/pi)
 
         #self.theta_rod = np.random.uniform(low=-roll_range*pi/180, high=roll_range*pi/180)
@@ -209,7 +211,7 @@ class Pendulum:
             costs = 1000 * angle_normalize(q1) ** 2 + 0.001*48**2
         '''
 
-        #costs = 1000 * angle_normalize(q1) ** 2 + 0.1 * q1_dot ** 2 + 0.001 * torque ** 2
+        # costs = 1000 * angle_normalize(q1) ** 2 + 0.1 * q1_dot ** 2 + 0.001 * torque ** 2
         costs = 1000 * angle_normalize(q1) ** 2 + 0.1 * q1_dot ** 2 + 0.001 * torque ** 2 + 0.00001*q2_dot**2
         #costs = torque ** 2 + 0.01 * q2_dot**2
 
