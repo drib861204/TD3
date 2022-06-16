@@ -3,30 +3,35 @@ import torch
 import gym
 import argparse
 import os
-
 import utils
 import TD3
 import OurDDPG
 import DDPG
-from Pendulum import *  # added by Ben
 import matplotlib.pyplot as plt
+from Pendulum_v3_mirror import *  # added by Ben
 
-def transient_response(eval_env, state_action_log):
+
+def transient_response(state_action_log):
 	# print(np.shape(state_action_log)[0])
-	fig, axs = plt.subplots(3)
+	fig, axs = plt.subplots(4)
 	fig.suptitle('TD3 Transient Response')
-	t = np.arange(0, eval_env.dt * np.shape(state_action_log)[0], eval_env.dt)
+	t = np.linspace(0, eval_env.dt * (state_action_log.shape[0] - 1), state_action_log.shape[0])
 	axs[0].plot(t[1:], state_action_log[1:, 0])
+	axs[3].plot(t[1:], state_action_log[1:, 1])
 	axs[1].plot(t[1:], state_action_log[1:, 2])
 	axs[2].plot(t[1:], state_action_log[1:, 3] * eval_env.max_torque)
 	axs[0].set_ylabel('q1(rad)')
 	axs[1].set_ylabel('q2 dot(rad/s)')
 	axs[2].set_ylabel('torque(Nm)')
+	axs[3].set_ylabel('q1 dot(rad/s)')
 	axs[2].set_xlabel('time(s)')
-	axs[0].set_ylim([-0.01, 0.06])
+	# axs[0].set_ylim([-0.01, 0.06])
 	# axs[0].set_ylim([-pi-0.5,pi+0.5])
 	axs[1].set_ylim([-34, 34])
-	axs[2].set_ylim([-12, 12])
+	# axs[2].set_ylim([-12, 12])
+
+
+	plt.savefig(f"runs/rwip{args.trial}/fig/response{args.seed}")
 	plt.show()
 
 	print("e_ss=", state_action_log[-1, 0])
@@ -78,9 +83,9 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 	# eval_env = gym.make(env_name)
 	# eval_env.seed(seed + 100)
 	if args.load_model != "":
-		eval_env = Pendulum(1, seed + 100)
+		eval_env = Pendulum(1)
 	else:
-		eval_env = Pendulum(0, seed + 100)
+		eval_env = Pendulum(0)
 
 	avg_reward = 0.
 
@@ -111,7 +116,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 			state_action_log = np.concatenate((state_action_log, np.asmatrix(state_action)), axis=0)
 
 		if args.load_model != "":
-			transient_response(eval_env, state_action_log)
+			transient_response(state_action_log)
 
 	avg_reward /= eval_episodes
 
@@ -124,9 +129,9 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--policy", default="TD3")                  # Policy name (TD3, DDPG or OurDDPG)
-	parser.add_argument("--env", default="RWIP")          # OpenAI gym environment name
-	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
+	parser.add_argument("--policy", default="TD3")  # Policy name (TD3, DDPG or OurDDPG)
+	parser.add_argument("--env", default="rwip")  # OpenAI gym environment name
+	parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
 	parser.add_argument("--start_timesteps", default=25e3, type=int)# Time steps initial random policy is used
 	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
 	parser.add_argument("--max_timesteps", default=5e4, type=int)   # Max time steps to run environment
@@ -137,39 +142,36 @@ if __name__ == "__main__":
 	parser.add_argument("--policy_noise", default=0.2)              # Noise added to target policy during critic update
 	parser.add_argument("--noise_clip", default=0.5)                # Range to clip target policy noise
 	parser.add_argument("--policy_freq", default=2, type=int)       # Frequency of delayed policy updates
-	parser.add_argument("--save_model", default=True)        # Save model and optimizer parameters
+	parser.add_argument("--save_model", default=True)        		# Save model and optimizer parameters
 	parser.add_argument("--load_model", default="")                 # Model load file name, "" doesn't load, "default" uses file_name
 	parser.add_argument("--trial", type=int, default=0, help="trial")
 	args = parser.parse_args()
 
 	# print(args.save_model)
 
-	file_name = f"{args.policy}_{args.env}_{args.seed}"
+	file_name = f"rwip{args.trial}_{args.seed}"
 	print("---------------------------------------")
 	print(f"Policy: {args.policy}, Env: {args.env}, Seed: {args.seed}")
 	print("---------------------------------------")
 
-	if not os.path.exists(f"./results/{args.trial}"):
-		os.makedirs(f"./results/{args.trial}")
+	if not os.path.exists(f"runs/rwip{args.trial}/log/"):
+		os.makedirs(f"runs/rwip{args.trial}/log/")
 
-	if args.save_model and not os.path.exists(f"./models/{args.trial}"):
-		os.makedirs(f"./models/{args.trial}")
+	# if args.save_model and not os.path.exists(f"runs/rwip{args.trial}"):
+	#	os.makedirs(f"runs/rwip{args.trial}")
 
 	# env = gym.make(args.env)
-	env = Pendulum(0, args.seed)
+	env = Pendulum(0)
 
 	# Set seeds
 	# env.seed(args.seed)
 	# env.action_space.seed(args.seed)
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
-	
-	# state_dim = env.observation_space.shape[0]
-	# action_dim = env.action_space.shape[0]
-	# max_action = float(env.action_space.high[0])
-	state_dim = 3
-	action_dim = 1
-	max_action = 1
+
+	state_dim = env.observation_space.shape[0]
+	action_dim = env.action_space.shape[0]
+	max_action = float(env.action_space.high[0])
 
 	kwargs = {
 		"state_dim": state_dim,
@@ -193,11 +195,11 @@ if __name__ == "__main__":
 
 	if args.load_model == "render":
 		#policy_file = file_name if args.load_model == "default" else args.load_model
-		policy.load(f"./models/{args.trial}/{file_name}")
+		policy.load(f"runs/rwip{args.trial}/{file_name}")
 		eval_policy(policy, args.env, args.seed)
 
 	elif args.load_model != "" and args.load_model != "render": # continue training from previous policy model (modification pending)
-		policy.load(f"./models/{args.load_model}/{file_name}")
+		policy.load(f"runs/rwip{args.trial}/{file_name}")
 
 		replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
 
@@ -266,8 +268,8 @@ if __name__ == "__main__":
 			# Evaluate episode
 			if (t + 1) % args.eval_freq == 0:
 				evaluations.append(eval_policy(policy, args.env, args.seed))
-				np.save(f"./results/{args.trial}/{file_name}", evaluations)
-				if args.save_model: policy.save(f"./models/{args.trial}/{file_name}")
+				np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
+				if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
 
 	# else:
 	elif args.load_model == "":
@@ -338,5 +340,5 @@ if __name__ == "__main__":
 			# Evaluate episode
 			if (t + 1) % args.eval_freq == 0:
 				evaluations.append(eval_policy(policy, args.env, args.seed))
-				np.save(f"./results/{args.trial}/{file_name}", evaluations)
-				if args.save_model: policy.save(f"./models/{args.trial}/{file_name}")
+				np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
+				if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
