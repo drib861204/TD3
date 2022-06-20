@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from Pendulum_v3_mirror import *  # added by Ben
 
 
-def transient_response(state_action_log):
+def transient_response(eval_env, state_action_log):
 	# print(np.shape(state_action_log)[0])
 	fig, axs = plt.subplots(4)
 	fig.suptitle('TD3 Transient Response')
@@ -29,7 +29,6 @@ def transient_response(state_action_log):
 	# axs[0].set_ylim([-pi-0.5,pi+0.5])
 	axs[1].set_ylim([-34, 34])
 	# axs[2].set_ylim([-12, 12])
-
 
 	plt.savefig(f"runs/rwip{args.trial}/fig/response{args.seed}")
 	plt.show()
@@ -116,7 +115,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 			state_action_log = np.concatenate((state_action_log, np.asmatrix(state_action)), axis=0)
 
 		if args.load_model != "":
-			transient_response(state_action_log)
+			transient_response(eval_env, state_action_log)
 
 	avg_reward /= eval_episodes
 

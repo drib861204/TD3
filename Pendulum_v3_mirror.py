@@ -21,7 +21,8 @@ from gym import spaces, logger
 
 
 class Pendulum(gym.Env):
-    def __init__(self, rend):
+    def __init__(self, rend, w_tau):
+        self.weight_tau = w_tau
 
         self.theta_rod = 0
         self.theta_wheel = 0
@@ -51,9 +52,7 @@ class Pendulum(gym.Env):
         self.max_q1 = 5*pi/180 # stop training below this angle
         self.max_q1dot = 1 #initial q1_dot default 0.3? to be verified
 
-        #self.wheel_max_speed = 20
-        self.wheel_max_speed = 30 # not fixed
-        #self.max_torque = 20
+        self.wheel_max_speed = 28
         self.max_torque = 21
 
         self.torque = 0
@@ -90,7 +89,7 @@ class Pendulum(gym.Env):
     def reset(self, saved, curriculum_numerator=1000):
         # self.state is for render, self.agent_state is for training
 
-        self.ang = 1*pi/180 # reset angle
+        self.ang = 2*pi/180 # reset angle
 
         curriculum_denominator = 15
         if curriculum_numerator < curriculum_denominator:
@@ -205,8 +204,8 @@ class Pendulum(gym.Env):
         # costs = 100 * q1 ** 2
         # costs = q1_dot ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2
-        costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 0.0001 * (self.last_torque - torque) ** 2
-        # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 0.0001 * torque ** 2
+        # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 0.0001 * (self.last_torque - torque) ** 2
+        costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + self.weight_tau * torque ** 2
         # costs = 1000 * q1 ** 2 + 0.1 * q1_dot ** 2 + 0.001 * torque ** 2 + 0.00001 * q2_dot**2
         # costs = 100 * q1 ** 2 + 0.00001 * q2_dot ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 100 * torque ** 2 + 0.001 * q2_dot ** 2

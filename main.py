@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from Pendulum_v3_mirror import *  # added by Ben
 
 
-def transient_response(state_action_log):
+def transient_response(eval_env, state_action_log):
 	# print(np.shape(state_action_log)[0])
 	fig, axs = plt.subplots(4)
 	fig.suptitle('TD3 Transient Response')
@@ -29,7 +29,6 @@ def transient_response(state_action_log):
 	# axs[0].set_ylim([-pi-0.5,pi+0.5])
 	axs[1].set_ylim([-34, 34])
 	# axs[2].set_ylim([-12, 12])
-
 
 	plt.savefig(f"runs/rwip{args.trial}/fig/response{args.seed}")
 	plt.show()
@@ -116,7 +115,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 			state_action_log = np.concatenate((state_action_log, np.asmatrix(state_action)), axis=0)
 
 		if args.load_model != "":
-			transient_response(state_action_log)
+			transient_response(eval_env, state_action_log)
 
 	avg_reward /= eval_episodes
 
@@ -125,11 +124,11 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 	print("---------------------------------------")
 	return avg_reward
 
-def training():
+def run():
 	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
 
 	# Evaluate untrained policy
-	evaluations = [eval_policy(policy, args.env, args.seed)]
+	# evaluations = [eval_policy(policy, args.env, args.seed)]
 
 	state, done = env.reset(None), False
 
@@ -148,25 +147,25 @@ def training():
 			# action = env.action_space.sample()
 			action = np.random.uniform(low=-1, high=1, size=action_dim)
 			action_test = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				policy.select_action(np.array(state))
+				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
 			).clip(-max_action, max_action)
 		else:
 			action = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				policy.select_action(np.array(state))
+				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
 			).clip(-max_action, max_action)
 
 		# Perform action
 		next_state, reward, done, _ = env.step(action)
 
-		# print("test")
+		#print("test")
 		# print(next_state)
 		# print("reward",reward)
 		# print(done)
 
 		# done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
-		done_bool = float(done) if episode_timesteps < 200 else 0
+		done_bool = float(done) if episode_timesteps < 500 else 0
 
 		# Store data in replay buffer
 		# print(next_state)
@@ -181,21 +180,25 @@ def training():
 		if t >= args.start_timesteps:
 			policy.train(replay_buffer, args.batch_size)
 
-		if done or episode_timesteps % 200 == 0:
+		if done or episode_timesteps % 500 == 0:
 			# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-			print(
-				f"Total T: {t + 1} Episode Num: {episode_num + 1} Episode T: {episode_timesteps} Reward: {episode_reward}")
+			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward}")
 			# Reset environment
 			state, done = env.reset(None), False
 			episode_reward = 0
 			episode_timesteps = 0
 			episode_num += 1
-
-		# Evaluate episode
-		if (t + 1) % args.eval_freq == 0:
-			evaluations.append(eval_policy(policy, args.env, args.seed))
-			np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
 			if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
+			log_f.write('{},{},{}\n'.format(episode_num, t, episode_reward))
+			log_f.flush()
+
+
+# Evaluate episode
+		#if (t + 1) % args.eval_freq == 0:
+		#	evaluations.append(eval_policy(policy, args.env, args.seed))
+		#	np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
+		#	if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
+
 
 
 if __name__ == "__main__":
@@ -215,7 +218,7 @@ if __name__ == "__main__":
 	parser.add_argument("--noise_clip", default=0.5)                # Range to clip target policy noise
 	parser.add_argument("--policy_freq", default=2, type=int)       # Frequency of delayed policy updates
 	parser.add_argument("--save_model", default=True)        		# Save model and optimizer parameters
-	parser.add_argument("--load_model", default="")                 # Model load file name, "" doesn't load, "default" uses file_name
+	parser.add_argument("--load_model", default=False)                 # Model load file name, "" doesn't load, "default" uses file_name
 	parser.add_argument("--trial", type=int, default=0, help="trial")
 	args = parser.parse_args()
 
@@ -226,8 +229,12 @@ if __name__ == "__main__":
 	print(f"Policy: {args.policy}, Env: {args.env}, Seed: {args.seed}")
 	print("---------------------------------------")
 
-	if not os.path.exists(f"runs/rwip{args.trial}/log/"):
-		os.makedirs(f"runs/rwip{args.trial}/log/")
+	log_dir = f"runs/rwip{args.trial}/log/"
+	if not os.path.exists(log_dir):
+		os.makedirs(log_dir)
+	log_f_name = log_dir + f"/TD3_log_{args.seed}.csv"
+	log_f = open(log_f_name,"w+")
+	log_f.write('episode,timestep,raw_reward\n')
 
 	# if args.save_model and not os.path.exists(f"runs/rwip{args.trial}"):
 	#	os.makedirs(f"runs/rwip{args.trial}")
@@ -265,11 +272,16 @@ if __name__ == "__main__":
 	elif args.policy == "DDPG":
 		policy = DDPG.DDPG(**kwargs)
 
-	if args.load_model == "test":
+	if args.load_model:
 		#policy_file = file_name if args.load_model == "default" else args.load_model
 		policy.load(f"runs/rwip{args.trial}/{file_name}")
 		eval_policy(policy, args.env, args.seed)
 
+	#elif args.load_model == "train":
+	else:
+		run()
+
+	'''
 	elif args.load_model == "cont": # continue training from previous policy model (modification pending)
 		policy.load(f"runs/rwip{args.trial}/{file_name}")
 
@@ -342,75 +354,4 @@ if __name__ == "__main__":
 				evaluations.append(eval_policy(policy, args.env, args.seed))
 				np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
 				if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
-
-	# else:
-	elif args.load_model == "train":
-		replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-
-		# Evaluate untrained policy
-		evaluations = [eval_policy(policy, args.env, args.seed)]
-
-		state, done = env.reset(None), False
-
-		# print("state",state)
-
-		episode_reward = 0
-		episode_timesteps = 0
-		episode_num = 0
-
-		for t in range(int(args.max_timesteps)):
-
-			episode_timesteps += 1
-
-			# Select action randomly or according to policy
-			if t < args.start_timesteps:
-				# action = env.action_space.sample()
-				action = np.random.uniform(low=-1, high=1, size=action_dim)
-				action_test = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-				).clip(-max_action, max_action)
-			else:
-				action = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-				).clip(-max_action, max_action)
-
-			# Perform action
-			next_state, reward, done, _ = env.step(action)
-
-			#print("test")
-			# print(next_state)
-			# print("reward",reward)
-			# print(done)
-
-			# done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
-			done_bool = float(done) if episode_timesteps < 200 else 0
-
-			# Store data in replay buffer
-			# print(next_state)
-			# print(reward)
-			# print(done)
-			replay_buffer.add(state, action, next_state, reward, done_bool)
-
-			state = next_state
-			episode_reward += reward
-
-			# Train agent after collecting sufficient data
-			if t >= args.start_timesteps:
-				policy.train(replay_buffer, args.batch_size)
-
-			if done or episode_timesteps % 200 == 0:
-				# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-				print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward}")
-				# Reset environment
-				state, done = env.reset(None), False
-				episode_reward = 0
-				episode_timesteps = 0
-				episode_num += 1
-
-			# Evaluate episode
-			if (t + 1) % args.eval_freq == 0:
-				evaluations.append(eval_policy(policy, args.env, args.seed))
-				np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
-				if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
+	'''
