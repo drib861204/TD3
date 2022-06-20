@@ -9,6 +9,7 @@ import OurDDPG
 import DDPG
 import matplotlib.pyplot as plt
 from Pendulum_v3_mirror import *  # added by Ben
+import time
 
 
 def transient_response(eval_env, state_action_log):
@@ -76,6 +77,14 @@ def transient_response(eval_env, state_action_log):
 	print("[min_c, t_c, min_d, t_d]=", [min_c, t_c, min_d, t_d])
 	print("settling time=", t_c, "or", t_d)
 
+
+def timer(start, end):
+    """ Helper to print training time """
+    hours, rem = divmod(end - start, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print("\nTraining Time:  {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
+
+
 # Runs policy for X episodes and returns average reward
 # A fixed seed is used for the eval environment
 def eval_policy(policy, env_name, seed, eval_episodes=3):
@@ -99,22 +108,30 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 
 		# print("eval_state",state)
 
-		while not done and rep < 3000:
+		time_duration = 5 #second
+		rep_max = time_duration/eval_env.dt
+
+		while not done and rep < rep_max:
 			rep += 1
 
-			if args.load_model != "": # while training, don't render
+			if args.load_model: # while training, don't render
 				eval_env.render(i + 1)
 
-			action = policy.select_action(np.array(state))
+			if state[2] >= eval_env.wheel_max_speed or state[2] <= -eval_env.wheel_max_speed:
+				action = np.array([0])
+			else:
+				action = policy.select_action(np.array(state))
 			# print("eval_action",action)
 			state, reward, done, _ = eval_env.step(action)
+			state_for_render = eval_env.state
+
 			avg_reward += reward
 			# print("eval_reward", reward)
 
-			state_action = np.append(state, action[0])
+			state_action = np.append(state_for_render, action)
 			state_action_log = np.concatenate((state_action_log, np.asmatrix(state_action)), axis=0)
 
-		if args.load_model != "":
+		if args.load_model:
 			transient_response(eval_env, state_action_log)
 
 	avg_reward /= eval_episodes
@@ -139,22 +156,25 @@ def run():
 	episode_num = 0
 
 	for t in range(int(args.max_timesteps)):
-
 		episode_timesteps += 1
 
-		# Select action randomly or according to policy
-		if t < args.start_timesteps:
-			# action = env.action_space.sample()
-			action = np.random.uniform(low=-1, high=1, size=action_dim)
-			action_test = (
-				policy.select_action(np.array(state))
-				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-			).clip(-max_action, max_action)
+		if state[2] >= env.wheel_max_speed or state[2] <= -env.wheel_max_speed:
+			action = np.array([0])
 		else:
-			action = (
-				policy.select_action(np.array(state))
-				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-			).clip(-max_action, max_action)
+			# Select action randomly or according to policy
+			if t < args.start_timesteps:
+				# action = env.action_space.sample()
+				action = np.random.uniform(low=-1, high=1, size=action_dim)
+				'''action_test = (
+					policy.select_action(np.array(state))
+					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				).clip(-max_action, max_action)'''
+			else:
+				action = (
+					policy.select_action(np.array(state))
+					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+				).clip(-max_action, max_action)
+
 
 		# Perform action
 		next_state, reward, done, _ = env.step(action)
@@ -183,14 +203,16 @@ def run():
 		if done or episode_timesteps % 500 == 0:
 			# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
 			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward}")
+			log_f.write('{},{},{}\n'.format(episode_num, t, episode_reward))
+			log_f.flush()
+
 			# Reset environment
 			state, done = env.reset(None), False
 			episode_reward = 0
 			episode_timesteps = 0
 			episode_num += 1
-			if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
-			log_f.write('{},{},{}\n'.format(episode_num, t, episode_reward))
-			log_f.flush()
+			#if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
+			if not args.load_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
 
 
 # Evaluate episode
@@ -204,9 +226,9 @@ def run():
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--policy", default="TD3")  # Policy name (TD3, DDPG or OurDDPG)
-	parser.add_argument("--env", default="rwip")  # OpenAI gym environment name
-	parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
+	parser.add_argument("--policy", default="TD3")                  # Policy name (TD3, DDPG or OurDDPG)
+	parser.add_argument("--env", default="rwip")                    # OpenAI gym environment name
+	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
 	parser.add_argument("--start_timesteps", default=25e3, type=int)# Time steps initial random policy is used
 	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
 	parser.add_argument("--max_timesteps", default=5e4, type=int)   # Max time steps to run environment
@@ -217,8 +239,8 @@ if __name__ == "__main__":
 	parser.add_argument("--policy_noise", default=0.2)              # Noise added to target policy during critic update
 	parser.add_argument("--noise_clip", default=0.5)                # Range to clip target policy noise
 	parser.add_argument("--policy_freq", default=2, type=int)       # Frequency of delayed policy updates
-	parser.add_argument("--save_model", default=True)        		# Save model and optimizer parameters
-	parser.add_argument("--load_model", default=False)                 # Model load file name, "" doesn't load, "default" uses file_name
+	parser.add_argument("--save_model", default=True)        		# Save model and optimizer parameters, not in use now, only use load_model
+	parser.add_argument("-l", "--load_model", default=False)        # False: training; True: testing
 	parser.add_argument("--trial", type=int, default=0, help="trial")
 	args = parser.parse_args()
 
@@ -232,9 +254,13 @@ if __name__ == "__main__":
 	log_dir = f"runs/rwip{args.trial}/log/"
 	if not os.path.exists(log_dir):
 		os.makedirs(log_dir)
-	log_f_name = log_dir + f"/TD3_log_{args.seed}.csv"
+	current_num_files = next(os.walk(log_dir))[2]
+	run_num = len(current_num_files)
+	log_f_name = log_dir + f"/TD3_log_{run_num}.csv"
 	log_f = open(log_f_name,"w+")
 	log_f.write('episode,timestep,raw_reward\n')
+
+	t0 = time.time()
 
 	# if args.save_model and not os.path.exists(f"runs/rwip{args.trial}"):
 	#	os.makedirs(f"runs/rwip{args.trial}")
@@ -355,3 +381,7 @@ if __name__ == "__main__":
 				np.save(f"runs/rwip{args.trial}/log/{file_name}", evaluations)
 				if args.save_model: policy.save(f"runs/rwip{args.trial}/{file_name}")
 	'''
+
+	t1 = time.time()
+	timer(t0, t1)
+	log_f.close()
