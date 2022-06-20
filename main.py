@@ -90,7 +90,7 @@ def timer(start, end):
 def eval_policy(policy, env_name, seed, eval_episodes=3):
 	# eval_env = gym.make(env_name)
 	# eval_env.seed(seed + 100)
-	if args.load_model != "":
+	if args.load_model:
 		eval_env = Pendulum(1)
 	else:
 		eval_env = Pendulum(0)
@@ -226,26 +226,25 @@ def run():
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--policy", default="TD3")                  # Policy name (TD3, DDPG or OurDDPG)
-	parser.add_argument("--env", default="rwip")                    # OpenAI gym environment name
-	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
-	parser.add_argument("--start_timesteps", default=25e3, type=int)# Time steps initial random policy is used
-	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
-	parser.add_argument("--max_timesteps", default=5e4, type=int)   # Max time steps to run environment
-	parser.add_argument("--expl_noise", default=0.1)                # Std of Gaussian exploration noise
-	parser.add_argument("--batch_size", default=256, type=int)      # Batch size for both actor and critic
-	parser.add_argument("--discount", default=0.99)                 # Discount factor
-	parser.add_argument("--tau", type=float, default=0.005)                     # Target network update rate
-	parser.add_argument("--policy_noise", default=0.2)              # Noise added to target policy during critic update
-	parser.add_argument("--noise_clip", default=0.5)                # Range to clip target policy noise
-	parser.add_argument("--policy_freq", default=2, type=int)       # Frequency of delayed policy updates
-	parser.add_argument("--save_model", default=True)        		# Save model and optimizer parameters, not in use now, only use load_model
-	parser.add_argument("-l", "--load_model", default=False)        # False: training; True: testing
-	parser.add_argument("--trial", type=int, default=0, help="trial")
+	parser.add_argument("--policy", default="TD3", type=str)                  # Policy name (TD3, DDPG or OurDDPG)
+	parser.add_argument("--env", default="rwip", type=str)                    # OpenAI gym environment name
+	parser.add_argument("--seed", default=0, type=int)                        # Sets Gym, PyTorch and Numpy seeds
+	parser.add_argument("--start_timesteps", default=25e3, type=int)          # Time steps initial random policy is used
+	parser.add_argument("--eval_freq", default=5e3, type=int)                 # How often (time steps) we evaluate
+	parser.add_argument("--max_timesteps", default=5e4, type=int)             # Max time steps to run environment
+	parser.add_argument("--expl_noise", default=0.1, type=float)              # Std of Gaussian exploration noise
+	parser.add_argument("--batch_size", default=256, type=int)                # Batch size for both actor and critic
+	parser.add_argument("--discount", default=0.99, type=float)               # Discount factor
+	parser.add_argument("--tau", default=0.005, type=float)                   # Target network update rate
+	parser.add_argument("--policy_noise", default=0.2, type=float)            # Noise added to target policy during critic update
+	parser.add_argument("--noise_clip", default=0.5, type=float)              # Range to clip target policy noise
+	parser.add_argument("--policy_freq", default=2, type=int)                 # Frequency of delayed policy updates
+	parser.add_argument("--save_model", default=1, type=int)                  # Save model and optimizer parameters, not in use now, only use load_model
+	parser.add_argument("-l", "--load_model", default=0, type=int)            # 0: training; 1: testing
+	parser.add_argument("--trial", default=0, type=int, help="trial")
 	args = parser.parse_args()
 
 	# print(args.save_model)
-	print(type(args.tau))
 
 	file_name = f"rwip{args.trial}_{args.seed}"
 	print("---------------------------------------")
