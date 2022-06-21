@@ -242,6 +242,7 @@ if __name__ == "__main__":
 	parser.add_argument("--save_model", default=1, type=int)                  # Save model and optimizer parameters, not in use now, only use load_model
 	parser.add_argument("-l", "--load_model", default=0, type=int)            # 0: training; 1: testing
 	parser.add_argument("--trial", default=0, type=int, help="trial")
+	parser.add_argument("-lr", default=2e-3, type=float, help="learning rate")
 	args = parser.parse_args()
 
 	# print(args.save_model)
@@ -292,6 +293,7 @@ if __name__ == "__main__":
 		kwargs["policy_noise"] = args.policy_noise * max_action
 		kwargs["noise_clip"] = args.noise_clip * max_action
 		kwargs["policy_freq"] = args.policy_freq
+		kwargs["lr"] = args.lr
 		policy = TD3.TD3(**kwargs)
 	elif args.policy == "OurDDPG":
 		policy = OurDDPG.DDPG(**kwargs)

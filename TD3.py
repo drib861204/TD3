@@ -75,16 +75,17 @@ class TD3(object):
 		tau=0.005,
 		policy_noise=0.2,
 		noise_clip=0.5,
-		policy_freq=2
+		policy_freq=2,
+		lr=2e-3
 	):
 
 		self.actor = Actor(state_dim, action_dim, max_action).to(device)
 		self.actor_target = copy.deepcopy(self.actor)
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
 
 		self.critic = Critic(state_dim, action_dim).to(device)
 		self.critic_target = copy.deepcopy(self.critic)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=3e-4)
+		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
 		self.max_action = max_action
 		self.discount = discount
@@ -161,11 +162,11 @@ class TD3(object):
 
 
 	def load(self, filename):
-		self.critic.load_state_dict(torch.load(filename + "_critic"))
-		self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
+		self.critic.load_state_dict(torch.load(filename + "_critic",map_location=torch.device('cpu')))
+		self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer",map_location=torch.device('cpu')))
 		self.critic_target = copy.deepcopy(self.critic)
 
-		self.actor.load_state_dict(torch.load(filename + "_actor"))
-		self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
+		self.actor.load_state_dict(torch.load(filename + "_actor",map_location=torch.device('cpu')))
+		self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer",map_location=torch.device('cpu')))
 		self.actor_target = copy.deepcopy(self.actor)
 		
