@@ -32,7 +32,7 @@ def transient_response(eval_env, state_action_log):
 	# axs[2].set_ylim([-12, 12])
 
 	plt.savefig(f"runs/rwip{args.trial}/fig/response{args.seed}")
-	plt.show()
+	#plt.show()
 
 	print("e_ss=", state_action_log[-1, 0])
 	print("u_ss=", state_action_log[-1, 3] * eval_env.max_torque)
@@ -87,10 +87,10 @@ def timer(start, end):
 
 # Runs policy for X episodes and returns average reward
 # A fixed seed is used for the eval environment
-def eval_policy(policy, env_name, seed, eval_episodes=3):
+def eval_policy(policy, env_name, seed, eval_episodes=1):
 	# eval_env = gym.make(env_name)
 	# eval_env.seed(seed + 100)
-	if args.load_model:
+	if args.render:
 		eval_env = Pendulum(1)
 	else:
 		eval_env = Pendulum(0)
@@ -114,7 +114,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
 		while not done and rep < rep_max:
 			rep += 1
 
-			if args.load_model: # while training, don't render
+			if args.render: # while training, don't render
 				eval_env.render(i + 1)
 
 			if state[2] >= eval_env.wheel_max_speed or state[2] <= -eval_env.wheel_max_speed:
@@ -242,7 +242,8 @@ if __name__ == "__main__":
 	parser.add_argument("--save_model", default=1, type=int)                  # Save model and optimizer parameters, not in use now, only use load_model
 	parser.add_argument("-l", "--load_model", default=0, type=int)            # 0: training; 1: testing
 	parser.add_argument("--trial", default=0, type=int, help="trial")
-	parser.add_argument("-lr", default=2e-3, type=float, help="learning rate")
+	parser.add_argument("-lr", default=3e-4, type=float, help="learning rate")
+	parser.add_argument("-r", "--render", default=0, type=int, help="render")
 	args = parser.parse_args()
 
 	# print(args.save_model)
