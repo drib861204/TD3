@@ -163,8 +163,8 @@ def run():
 		else:
 			# Select action randomly or according to policy
 			if t < args.start_timesteps:
-				# action = env.action_space.sample()
-				action = np.random.uniform(low=-1, high=1, size=action_dim)
+				action = env.action_space.sample()
+				# action = np.random.uniform(low=-1, high=1, size=action_dim)
 				'''action_test = (
 					policy.select_action(np.array(state))
 					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)

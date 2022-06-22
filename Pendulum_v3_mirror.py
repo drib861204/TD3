@@ -163,10 +163,11 @@ class Pendulum(gym.Env):
         action_scale = self.max_torque
 
         if q1 >= 0:
-            torque = action * action_scale
+            torque = action #* action_scale
         else:
-            torque = -action * action_scale
+            torque = -action #* action_scale
         torque = torque[0]
+        #print(torque)
 
         #if q2_dot >= self.wheel_max_speed or q2_dot <= -self.wheel_max_speed:
         #    torque = 0
@@ -203,16 +204,16 @@ class Pendulum(gym.Env):
 
         # costs = 100 * q1 ** 2
         # costs = q1_dot ** 2
-        # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2
-        costs = 1000 * q1 ** 2 + 0.1 * q1_dot ** 2
+        costs = 100 * q1 ** 2 + 1 * q1_dot ** 2
+        # costs = 1000 * q1 ** 2 + 0.1 * q1_dot ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 0.0001 * (self.last_torque - torque) ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + self.weight_tau * torque ** 2
         # costs = 1000 * q1 ** 2 + 0.1 * q1_dot ** 2 + 0.001 * torque ** 2 + 0.00001 * q2_dot**2
         # costs = 100 * q1 ** 2 + 0.00001 * q2_dot ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 100 * torque ** 2 + 0.001 * q2_dot ** 2
 
-        #if done:
-        #    costs += 1000
+        if done:
+            costs += 1000
 
         #if abs(q1) < 0.001 and abs(q1_dot) < 0.001 and abs(q2_dot) < 0.1 :
         #    costs -= 1000
