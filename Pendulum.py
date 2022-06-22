@@ -65,7 +65,7 @@ class Pendulum:
 
 
     def reset(self, saved):
-        roll_range = 3 #in degree
+        roll_range = 10 #in degree
         self.ang = roll_range
         #reset_max_speed = 3
 

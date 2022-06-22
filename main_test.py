@@ -33,7 +33,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=3):
         while not done and rep < 3000:
             rep += 1
 
-            # eval_env.render(i + 1)
+            eval_env.render(i + 1)
 
             action = policy.select_action(np.array(state))
             # print("eval_action",action)
