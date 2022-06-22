@@ -211,8 +211,8 @@ class Pendulum(gym.Env):
         # costs = 100 * q1 ** 2 + 0.00001 * q2_dot ** 2
         # costs = 100 * q1 ** 2 + 1 * q1_dot ** 2 + 100 * torque ** 2 + 0.001 * q2_dot ** 2
 
-        if done:
-            costs += 1000
+        #if done:
+        #    costs += 1000
 
         #if abs(q1) < 0.001 and abs(q1_dot) < 0.001 and abs(q2_dot) < 0.1 :
         #    costs -= 1000
