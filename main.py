@@ -20,7 +20,7 @@ def transient_response(eval_env, state_action_log):
 	axs[0].plot(t[1:], state_action_log[1:, 0])
 	axs[3].plot(t[1:], state_action_log[1:, 1])
 	axs[1].plot(t[1:], state_action_log[1:, 2])
-	axs[2].plot(t[1:], state_action_log[1:, 3] * eval_env.max_torque)
+	axs[2].plot(t[1:], state_action_log[1:, 3]) # * eval_env.max_torque)
 	axs[0].set_ylabel('q1(rad)')
 	axs[1].set_ylabel('q2 dot(rad/s)')
 	axs[2].set_ylabel('torque(Nm)')
@@ -121,7 +121,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=1):
 				action = np.array([0])
 			else:
 				action = policy.select_action(np.array(state))
-			# print("eval_action",action)
+			print("eval_action",action)
 			state, reward, done, _ = eval_env.step(action)
 			state_for_render = eval_env.state
 
@@ -388,4 +388,5 @@ if __name__ == "__main__":
 
 	t1 = time.time()
 	timer(t0, t1)
-	log_f.close()
+	if not args.load_model:
+		log_f.close()
