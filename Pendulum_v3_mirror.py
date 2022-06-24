@@ -90,13 +90,14 @@ class Pendulum(gym.Env):
         # self.state is for render, self.agent_state is for training
 
         self.ang = 2*pi/180 # reset angle
+        self.low_ang = 0 # random lower bound
 
-        curriculum_denominator = 15
+        '''curriculum_denominator = 15
         if curriculum_numerator < curriculum_denominator:
             self.ang = self.ang * curriculum_numerator / curriculum_denominator
-
+        '''
         if saved == None:
-            reset_angle_random = np.random.uniform(low=-self.ang, high=self.ang)
+            reset_angle_random = np.random.uniform(low=self.low_ang, high=self.ang)
             #reset_high = np.array([self.ang, self.max_q1dot, self.wheel_max_speed])
             #self.state = np.random.uniform(low=-reset_high, high=reset_high)
             self.state = np.array([reset_angle_random, 0, 0], dtype=np.float32)

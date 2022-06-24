@@ -10,6 +10,7 @@ import DDPG
 import matplotlib.pyplot as plt
 from Pendulum_v3_mirror import *  # added by Ben
 import time
+from collections import deque
 
 
 def transient_response(eval_env, state_action_log):
@@ -121,7 +122,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=1):
 				action = np.array([0])
 			else:
 				action = policy.select_action(np.array(state))
-			print("eval_action",action)
+			#print("eval_action",action)
 			state, reward, done, _ = eval_env.step(action)
 			state_for_render = eval_env.state
 
@@ -154,6 +155,7 @@ def run():
 	episode_reward = 0
 	episode_timesteps = 0
 	episode_num = 0
+	scores_window = deque(maxlen=30)  # last 30 scores
 
 	for t in range(int(args.max_timesteps)):
 		episode_timesteps += 1
@@ -205,6 +207,10 @@ def run():
 			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward}")
 			log_f.write('{},{},{}\n'.format(episode_num, t, episode_reward))
 			log_f.flush()
+
+			scores_window.append(episode_reward)
+			if np.mean(scores_window) > -10:
+				break
 
 			# Reset environment
 			state, done = env.reset(None), False
