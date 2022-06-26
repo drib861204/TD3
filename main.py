@@ -198,6 +198,8 @@ def run():
 		state = next_state
 		episode_reward += reward
 
+		print(time.time())
+
 		# Train agent after collecting sufficient data
 		if t >= args.start_timesteps:
 			policy.train(replay_buffer, args.batch_size)
