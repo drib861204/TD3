@@ -118,10 +118,11 @@ def eval_policy(policy, env_name, seed, eval_episodes=1):
 			if args.render: # while training, don't render
 				eval_env.render(i + 1)
 
-			if state[2] >= eval_env.wheel_max_speed or state[2] <= -eval_env.wheel_max_speed:
-				action = np.array([0])
-			else:
-				action = policy.select_action(np.array(state))
+			#if state[2] >= eval_env.wheel_max_speed or state[2] <= -eval_env.wheel_max_speed:
+			#	action = np.array([0])
+			#else:
+			action = policy.select_action(np.array(state))
+
 			#print("eval_action",action)
 			state, reward, done, _ = eval_env.step(action)
 			state_for_render = eval_env.state
@@ -155,27 +156,27 @@ def run():
 	episode_reward = 0
 	episode_timesteps = 0
 	episode_num = 0
-	scores_window = deque(maxlen=30)  # last 30 scores
+	scores_window = deque(maxlen=20)  # last 30 scores
 
 	for t in range(int(args.max_timesteps)):
 		episode_timesteps += 1
 
-		if state[2] >= env.wheel_max_speed or state[2] <= -env.wheel_max_speed:
-			action = np.array([0])
+		#if state[2] >= env.wheel_max_speed or state[2] <= -env.wheel_max_speed:
+		#	action = np.array([0])
+		#else:
+		# Select action randomly or according to policy
+		if t < args.start_timesteps:
+			action = env.action_space.sample()
+			# action = np.random.uniform(low=-1, high=1, size=action_dim)
+			'''action_test = (
+				policy.select_action(np.array(state))
+				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+			).clip(-max_action, max_action)'''
 		else:
-			# Select action randomly or according to policy
-			if t < args.start_timesteps:
-				action = env.action_space.sample()
-				# action = np.random.uniform(low=-1, high=1, size=action_dim)
-				'''action_test = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-				).clip(-max_action, max_action)'''
-			else:
-				action = (
-					policy.select_action(np.array(state))
-					+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
-				).clip(-max_action, max_action)
+			action = (
+				policy.select_action(np.array(state))
+				+ np.random.normal(0, max_action * args.expl_noise, size=action_dim)
+			).clip(-max_action, max_action)
 
 
 		# Perform action
@@ -198,7 +199,7 @@ def run():
 		state = next_state
 		episode_reward += reward
 
-		print(time.time())
+		#print(time.time())
 
 		# Train agent after collecting sufficient data
 		if t >= args.start_timesteps:

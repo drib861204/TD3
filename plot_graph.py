@@ -105,7 +105,7 @@ def save_graph():
             #---------------------------------------#
 
             # smooth out rewards to get a smooth and a less smooth (var) plot lines
-            run['reward_smooth_' + str(i)] = run['raw_reward'].rolling(window=30, win_type='triang', min_periods=min_window_len_smooth).mean()
+            run['reward_smooth_' + str(i)] = run['raw_reward'].rolling(window=window_len_smooth, win_type='triang', min_periods=min_window_len_smooth).mean()
             run['reward_var_' + str(i)] = run['raw_reward'].rolling(window=window_len_var, win_type='triang', min_periods=min_window_len_var).mean()
 
             # plot the lines

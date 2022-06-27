@@ -90,14 +90,14 @@ class Pendulum(gym.Env):
         # self.state is for render, self.agent_state is for training
 
         self.ang = 2*pi/180 # reset angle
-        self.low_ang = 0 # random lower bound
+        #self.low_ang = 0 # random lower bound
 
         '''curriculum_denominator = 15
         if curriculum_numerator < curriculum_denominator:
             self.ang = self.ang * curriculum_numerator / curriculum_denominator
         '''
         if saved == None:
-            reset_angle_random = np.random.uniform(low=self.low_ang, high=self.ang)
+            reset_angle_random = np.random.uniform(low=-self.ang, high=self.ang)
             #reset_high = np.array([self.ang, self.max_q1dot, self.wheel_max_speed])
             #self.state = np.random.uniform(low=-reset_high, high=reset_high)
             self.state = np.array([reset_angle_random, 0, 0], dtype=np.float32)
@@ -176,10 +176,14 @@ class Pendulum(gym.Env):
         Ip = self.Ip
         a = self.mbarg*sin(q1)
 
-        q1_dot = q1_dot + ((a-torque)/(Ip-I2))*dt
+        if abs(q2_dot) > self.wheel_max_speed:
+            pass
+            #q1_dot = q1_dot
+            #q2_dot = q2_dot
+        else:
+            q1_dot = q1_dot + ((a-torque)/(Ip-I2))*dt
+            q2_dot = q2_dot + ((torque*Ip-a*I2)/I2/(Ip-I2))*dt
         q1 = angle_normalize(q1 + q1_dot * dt)
-
-        q2_dot = q2_dot + ((torque*Ip-a*I2)/I2/(Ip-I2))*dt
         #q2_dot = np.clip(q2_dot, -self.wheel_max_speed, self.wheel_max_speed)
         q2 = angle_normalize(angle_normalize(q2) + q2_dot * dt)
 
