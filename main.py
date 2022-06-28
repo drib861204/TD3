@@ -316,7 +316,7 @@ if __name__ == "__main__":
 		policy.load(f"runs/rwip{args.trial}/{file_name}")
 		eval_policy(policy, args.env, args.seed)
 
-	#elif args.load_model == "train":
+	#elif args.load_model == "train.py":
 	else:
 		run()
 
@@ -377,7 +377,7 @@ if __name__ == "__main__":
 
 			# Train agent after collecting sufficient data
 			if t >= args.start_timesteps:
-				policy.train(replay_buffer, args.batch_size)
+				policy.train.py(replay_buffer, args.batch_size)
 
 			if done or episode_timesteps % 200 == 0:
 				# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
